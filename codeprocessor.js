@@ -5,75 +5,96 @@
  *   	event.detail.data and the timestamp in event.timeStamp
  */
 
-// Creating data structure which represents the relationship between characters in plain text and characters in tap code (Step 1)
+// Step 1: Using data type 2D Array to store the 25 characters
+let characters=[
+    ["e","t","a","n","d"],
+    ["o","i","r","u","c"],
+    ["s","h","m","f","p"],
+    ["l","y","g","v","j"],
+    ["w","b","x","q","z"]
+];
 
-let codeAndText = [["e", "t", "a", "n", "d"], ["o", "i", "r", "u", "c"], ["s", "h", "m", "f", "p"], ["l", "y", "g", "v", "j"], ["w", "b", "x", "q", "z"]]; // a 5x5 array representing letters
+// Declaring variables
 
-// Declaring other variables
+let red=0;
+let green=0;
+let blue=0;
+var listening={
+    tapgap:[],
+    timing:[]
+};
+let output="";
+let totaltime=0;
+let code="";
+let final=[];
+let finalcode=[];
 
-let rxCodeRef = document.getElementById("rx-code");
-let rxTranslatedRef = document.getElementById("rx-translated");
-let fullGap = 0;
-let tap = 0;
-let tapCode = "";
-let str1 = ""; // String for the message from the user
-let halfGap = 0;
-let flag1 = 0;
-let flag2 = 0;
-let flag3 = 0;
-let gentime = 0;
-let gaptime = 0;
-let eventTimeB1 = 0;
-let totalTime = 0;
-let border = 100;
-let listeningLength;
-
-// Flags to be used
-let startTapFlag = false;
-let endTapFlag = false;
-let inTap = false;
+let rxcodeRef=document.getElementById("rx-code");
+let rxtranslatedRef=document.getElementById("rx-translated");
 
 _listen = function(event)
 {
-	// your code here
-    // Conversion to grayscale (Step 2)
-    let myObject = event;
-    let grayscale = 0;
-    let arrayForRGB = event.detail.data;
-    // Using a loop to convert RGB of each pixel into grayscale
-    for (let i = 0; i < arrayForRGB.length; i += 4){
-        let avgOfRGB = (event.detail.data[i] + event.detail.data[i + 1] + event.detail.data[i + 2]); // Excluding event.detail.data[i + 3] (which is the alpha component of each pixel)
-        event.detail.data[i] = Math.round(avgOfRGB);
-        event.detail.data[i + 1] = Math.round(avgOfRGB);
-        event.detail.data[i + 2] = Math.round(avgOfRGB);
-        grayscale += avgOfRGB;
-    }
-    let average = Math.round(grayscale/400);
-    let avgOutputString = "The average value for grayscale is ";
-    console.log(avgOutputString + average); // testing only
-    
-    // White/Black Duration (Step 3)
-    
-    // Checking whether the colour is white or black
-    
-    listeningLength = listening.tapgap.length;
-    tapCode = "";
-    for (i = 0; i < listeningLength; i++){
-        if (listening.tapgap[i]=="Black"){
-            if (tapCode !== ""){
-                totalTime += listening.timing[i] - listening.timing[i - 1]; 
-            }
-            else if (listening.tapgap[i]=="White"){
-                if (listening.tapgap[i-1]!=="White"){
-                    tapCode += "*";
-                    totalTime = 0;
-                }
-            }
-            if (totalTime > 450 && totalTime < 600){
-                tapCode+=" ";
-            }
+    // Step 2: Conversion to grayscale 
+	for (let i=0; i<1600; i=i+4)
+        {
+            red+=event.detail.data[i];
+            green+=event.detail.data[i+1];
+            blue+=event.detail.data[i+2];
+            // event.detail.data[i + 3] is ignored because it represents alpha values
         }
-    }
+    
+    // Calculating average value of red, green, and blue elements out of 400 values of red, green, and blue taken in the 'event.detail.data' array
+    // Average value of red, green, and blue for one square is (red + green + blue)/3
+    // Hence, average value of red, green, and blue for 400 squares = avg for one square/400
+    //                                                              = ((red + green + blue)/3)*(1/400)
+    //                                                              = (red + green + blue)/1200
+    avg=(red+green+blue)/1200;
+    
+    // Step 3: White/Black Duration
+    
+    if (avg<(255/2))
+        {
+            listening.tapgap.push("Black"); // Black square detected
+            listening.timing.push(event.timeStamp);
+        }
+    else
+        {
+            listening.tapgap.push("White"); // White square detected
+            listening.timing.push(event.timeStamp);   
+        }
+    
+    listeninglength=listening.tapgap.length;
+    code="";
+    // Checking each element of the 'listening' array
+    for(i=0; i<listeninglength; i++)
+        {
+            if(listening.tapgap[i]=="Black")
+                {
+                    if (code!=="")
+                        {
+                            totaltime+=listening.timing[i]-listening.timing[i-1];
+                        }
+                }
+            else if(listening.tapgap[i]=="White")
+                {
+                    if(listening.tapgap[i-1]!=="White")
+                        {
+                            code+="*";
+                            totaltime=0;
+                            // The white square represents a tap
+                        }
+                }
+            
+            // Step 4: Determining whether the black square represents a half-gap or a full-gap by checking the value of 'totaltime'
+            if (totaltime>450 && totaltime<600)
+                {
+                    code+=" ";
+                }
+        }
+    // Resetting values of red, green, and blue to 0
+    red=0;
+    green=0;
+    blue=0;
 };
 
 /**
@@ -81,9 +102,12 @@ _listen = function(event)
  */
 clear = function()
 {
-	// your code here
-    str1 = ""; // Resetting str1 (message string) into nothing at all
-    tapCode = ""; // Resetting tapCode into nothing at all
+    // Resetting the current state message
+    code = "";
+    output = "";
+    // Showing empty strings for 'code' and 'output' variables in the website
+    rxcodeRef.innerHTML=code;
+    rxtranslatedRef.innerHTML=output;
 };
 
 /**
@@ -91,35 +115,31 @@ clear = function()
  */
 translate = function()
 {
-	// your code here
-     // Converting into characters (Steps 5 and 7)
-    
-     for (let i = 0; i < str1.length; i++){
-        let particularChar = str1.charAt[i]; // character at a particular index of str1
-        if (particularChar = " "){ // if the particular character is a space
-            // replace character with "wuw"
-            particularChar = "wuw";
-        }
-        else if (particularChar = "k"){ // if the particular character is "k"
-            // replace character with "qc"
-            particularChar = "qc";
-        }
-        // else, match each character of str1 with the codeAndText array
-        for (let j = 0; j < codeAndText.length; j++){ // accessing each row of codeAndText array
-            for (let k = 0; k < codeAndText.length; k++){ // accessing each column of codeAndText array
-                // If the character matches with an element in the codeAndText array
-                if (particularChar.equals(codeAndText[j][k])){
-                    // Add the tapCode string with asterisks
-                    tapCode += "*" * j + " " + "*" * k + " ";
+    // Step 5: Conversion to characters
+    // Showing the original code as an output (Step 8)
+    rxcodeRef.innerHTML=code;
+	code=code.split(" ");
+    for (let j=0;j<code.length;j++)
+        {
+            if (code[j]!=="")
+                {
+                    finalcode.push(code[j].length);
                 }
-            }
         }
- }
-            
-    console.log(tapCode); // Testing only
     
-    // Displaying output and clearing (Step 8)
+    for(i=0; i<finalcode.length;i+=2)
+        {
+            output += characters[finalcode[i]-1][finalcode[i+1]-1];
+        }
     
-    rxCodeRef.innerHTML = str1; // coded version of the message
-    rxTranslatedRef.innerHTML = tapCode; // translated version of the message
+    // Step 7: Convert special characters which are not in the 'characters' array (i.e. spaces and "k")
+    output=output.replace(/wuw/g," ");
+    output=output.replace(/qc/g,"k");
+    
+    // Showing the translated code as an output (Step 8)
+    rxtranslatedRef.innerHTML=output; 
+    
+    // Calling clear function since we are done with our tap code conversion
+    // Clear function helps us reuse the program without reloading
+    clear;
 };
